@@ -2,6 +2,9 @@ package org.server;
 
 import java.io.*;
 import java.net.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map.Entry;
 
 public class SupServer {
 
@@ -13,6 +16,7 @@ public class SupServer {
 
     public class SupClientHandler implements Runnable {
         BufferedReader reader;
+        PrintWriter writer;
         String clientname = "";
         Socket sock;
 
@@ -21,6 +25,9 @@ public class SupServer {
                 sock = clientSocket;
                 InputStreamReader isReader = new InputStreamReader(sock.getInputStream());
                 reader = new BufferedReader(isReader);
+                
+                OutputStreamWriter osWriter = new OutputStreamWriter(sock.getOutputStream());
+                writer = new PrintWriter(new BufferedWriter(osWriter), true);
             }
             catch(Exception ex) {
                 ex.printStackTrace();
@@ -68,6 +75,10 @@ public class SupServer {
 
             } catch (IOException e) {
                 // TODO Auto-generated catch block
+                //I think server can also remove contact here and send the list to everyone
+            	//removeContact(clientname);
+            	//sendList();
+            	//return ;
                 e.printStackTrace();
             }
             // if they were actually authenticated and left, log them off..
@@ -112,4 +123,78 @@ public class SupServer {
             } catch (Exception ex) { ex.printStackTrace(); }
         }
     }
+    
+    /**
+     * return the status to the specific one
+	 *
+	 * @param 
+	 * 	status - status info
+	 *  toname - the specific one to transfer status
+     * */
+    public void tellSomeoneStatus(String status, String toname)
+    {
+    	System.out.println("Return the \"" + status +"\" to " + toname);
+    	if (Contacts.getInstance().hasContact(toname)) {
+            try {
+                PrintWriter writer = Contacts.getInstance().getContact(toname);
+                writer.println(status);
+                writer.flush();
+            } catch (Exception ex) { ex.printStackTrace(); }
+        }
+    }
+    
+    /**
+     * return the status to everyone
+	 *
+	 * @param 
+	 * 	status - status info
+     * */
+	public void tellEveryoneStatus(String status) {
+		System.out.println("Return the \"" + status + "\" to all");
+		try {
+			
+			List<PrintWriter> list = Contacts.getInstance().getWriterList();
+
+			for (PrintWriter writer : list) {
+				writer.println(status);
+				writer.flush();
+			}
+		} catch (Exception ex) {
+			ex.printStackTrace();
+		}
+	}
+	
+	/**
+     * remove contact from active list and send the online list to everyone
+	 *
+	 * @param 
+	 * 	name - the contact removed from the list
+     * */
+	public void removeContact(String name)
+	{
+		Contacts.getInstance().removeContact(name);
+		System.out.println(name + "has been removed from the contact");
+	}
+	
+	/**
+     * send user list after remove someone
+	 *
+     * */
+	public void sendList()
+	{
+		try {
+			List<String> users = Contacts.getInstance().getUserList();
+			List<PrintWriter> list = Contacts.getInstance().getWriterList();
+			for(int i=0; i<list.size(); i++)
+			{
+				PrintWriter writer = list.get(i);
+				writer.print(users.toArray());
+				writer.flush();
+			}
+			
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
 }
